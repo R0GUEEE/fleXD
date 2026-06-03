@@ -84,6 +84,9 @@ typedef NS_ENUM(NSUInteger, FLEXExplorerMode) {
 /// UIKit Dynamics animator for toolbar momentum after release.
 @property (nonatomic) UIDynamicAnimator *toolbarAnimator;
 
+/// The in-flight stash/restore spring, retained so a new touch can interrupt it.
+@property (nonatomic, nullable) UIViewPropertyAnimator *toolbarStashAnimator;
+
 /// Only valid while a selected view pan gesture is in progress.
 @property (nonatomic) CGFloat selectedViewLastPanX;
 
@@ -125,6 +128,10 @@ static const CGFloat kToolbarStashProjectionDeceleration = 1.0 / 6.0;
 /// How close to an edge the projected center must land to commit to a stash (pt).
 /// Starting value, tuned by feel.
 static const CGFloat kToolbarStashEdgeBand = 44.0;
+
+/// Clamp on the tuck spring's normalized initial velocity, so a tiny tuck distance
+/// with a fast flick can't explode the spring. Starting value, tuned by feel.
+static const CGFloat kToolbarStashMaxRelativeVelocity = 30.0;
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil {
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
@@ -617,7 +624,7 @@ static const CGFloat kToolbarStashEdgeBand = 44.0;
             CGPoint velocity = [panGR velocityInView:self.view];
             FLEXToolbarStashEdge edge = [self stashEdgeForReleaseWithVelocity:velocity];
             if (edge != FLEXToolbarStashEdgeNone) {
-                [self stashToolbarToEdge:edge];
+                [self stashToolbarToEdge:edge withVelocity:velocity];
             } else {
                 [self applyToolbarMomentumWithVelocity:velocity];
             }
@@ -797,7 +804,39 @@ static const CGFloat kToolbarStashEdgeBand = 44.0;
     );
 }
 
-- (void)stashToolbarToEdge:(FLEXToolbarStashEdge)edge {
+/// Springs the toolbar to `target`, seeding the spring's initial velocity from
+/// the release velocity (PiP-style continuity). Retains the animator so a new
+/// touch can interrupt it, and clears + persists on completion.
+- (void)animateToolbarToFrame:(CGRect)target withVelocity:(CGPoint)velocity {
+    const CGFloat dx = target.origin.x - self.explorerToolbar.frame.origin.x;
+    const CGFloat relVx = FLEXRelativeSpringVelocity(velocity.x, dx, kToolbarStashMaxRelativeVelocity);
+
+    UISpringTimingParameters *spring = [[UISpringTimingParameters alloc]
+        initWithDampingRatio:0.8 initialVelocity:CGVectorMake(relVx, 0.0)
+    ];
+    // Duration is nominal: with spring timing parameters the spring's own
+    // settling time governs the animation, not this value.
+    UIViewPropertyAnimator *animator = [[UIViewPropertyAnimator alloc]
+        initWithDuration:0.5 timingParameters:spring
+    ];
+
+    // weakSelf in BOTH blocks: self retains the animator (via the
+    // toolbarStashAnimator property), so a strong self capture here would form a
+    // self<->animator retain cycle that only breaks on completion.
+    __weak typeof(self) weakSelf = self;
+    [animator addAnimations:^{
+        weakSelf.explorerToolbar.frame = target;
+    }];
+    [animator addCompletion:^(UIViewAnimatingPosition finalPosition) {
+        weakSelf.toolbarStashAnimator = nil;
+        [weakSelf persistToolbarPosition];
+    }];
+
+    self.toolbarStashAnimator = animator;
+    [animator startAnimation];
+}
+
+- (void)stashToolbarToEdge:(FLEXToolbarStashEdge)edge withVelocity:(CGPoint)velocity {
     [self.toolbarAnimator removeAllBehaviors];
 
     const CGRect target = [self stashedToolbarFrameForEdge:edge fromFrame:self.explorerToolbar.frame];
@@ -805,16 +844,7 @@ static const CGFloat kToolbarStashEdgeBand = 44.0;
     self.toolbarStashEdge = edge;
     [self.explorerToolbar setStashEdge:edge animated:YES];
 
-    UIViewPropertyAnimator *animator = [[UIViewPropertyAnimator alloc]
-        initWithDuration:0.4 dampingRatio:0.8 animations:^{
-            self.explorerToolbar.frame = target;
-        }
-    ];
-    [animator addCompletion:^(UIViewAnimatingPosition finalPosition) {
-        [self persistToolbarPosition];
-    }];
-    [animator startAnimation];
-
+    [self animateToolbarToFrame:target withVelocity:velocity];
     [self persistToolbarPosition];
 }
 
