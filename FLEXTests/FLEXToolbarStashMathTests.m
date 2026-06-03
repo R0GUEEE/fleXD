@@ -29,4 +29,37 @@
     XCTAssertEqual(FLEXRelativeSpringVelocity(-3000, 5, 30), -30.0);
 }
 
+#pragma mark - FLEXStashEdgeForRelease
+
+- (void)testHardFlingLeftStashesLeft {
+    // projected = 160 + (-2000 * 0.167) = -174 <= 0 + 44 -> Left
+    XCTAssertEqual(FLEXStashEdgeForRelease(CGPointMake(-2000, 0), 160, 0, 320, 44, 0.167),
+                   FLEXToolbarStashEdgeLeft);
+}
+
+- (void)testHardFlingRightStashesRight {
+    // projected = 160 + (2000 * 0.167) = 494 >= 320 - 44 -> Right
+    XCTAssertEqual(FLEXStashEdgeForRelease(CGPointMake(2000, 0), 160, 0, 320, 44, 0.167),
+                   FLEXToolbarStashEdgeRight);
+}
+
+- (void)testGentleReleaseFromCenterDoesNotStash {
+    // projected = 160 + (100 * 0.167) = 176.7 -> between bands -> None
+    XCTAssertEqual(FLEXStashEdgeForRelease(CGPointMake(100, 0), 160, 0, 320, 44, 0.167),
+                   FLEXToolbarStashEdgeNone);
+}
+
+- (void)testPredominantlyVerticalFlingNeverStashes {
+    // |x| 2000 < |y| 3000 -> vertical intent -> None even though x alone reaches the edge
+    XCTAssertEqual(FLEXStashEdgeForRelease(CGPointMake(-2000, -3000), 160, 0, 320, 44, 0.167),
+                   FLEXToolbarStashEdgeNone);
+}
+
+- (void)testProjectionIsPositionAware {
+    // From near the right edge (center 290), a modest fling that wouldn't stash
+    // from center does stash: projected = 290 + (400 * 0.167) = 356.8 >= 276 -> Right
+    XCTAssertEqual(FLEXStashEdgeForRelease(CGPointMake(400, 0), 290, 0, 320, 44, 0.167),
+                   FLEXToolbarStashEdgeRight);
+}
+
 @end
