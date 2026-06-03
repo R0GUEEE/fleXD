@@ -37,10 +37,18 @@
 #include <atomic>
 #include <cstdlib>
 
-// Swift runtime demangling function
-extern "C" char *swift_demangle(const char *mangledName, size_t mangledNameLength,
-                                 char *outputBuffer, size_t *outputBufferSize,
-                                 uint32_t flags);
+// Swift runtime demangling: look up the symbol lazily via dlsym so that
+// a pure-ObjC app/test host doesn't need to link against libswiftCore.
+#include <dlfcn.h>
+typedef char *(*swift_demangle_fn)(const char *, size_t, char *, size_t *, uint32_t);
+static swift_demangle_fn FLEXSwiftDemangleFn(void) {
+    static swift_demangle_fn fn = NULL;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        fn = (swift_demangle_fn)dlsym(RTLD_DEFAULT, "swift_demangle");
+    });
+    return fn;
+}
 
 // class is a Swift class from the pre-stable Swift ABI
 #define FAST_IS_SWIFT_LEGACY  (1UL<<0)
@@ -150,8 +158,10 @@ extern "C" NSString *FLEXClassNameForClass(Class cls) {
     const char *className = class_getName(cls);
     if (!className) return nil;
 
-    // Try Swift demangling — swift_demangle returns NULL for non-Swift names
-    char *demangled = swift_demangle(className, strlen(className), NULL, NULL, 0);
+    // Try Swift demangling — returns NULL for non-Swift names or if libswiftCore
+    // isn't loaded (pure-ObjC binaries).
+    swift_demangle_fn fn = FLEXSwiftDemangleFn();
+    char *demangled = fn ? fn(className, strlen(className), NULL, NULL, 0) : NULL;
     if (demangled) {
         NSString *result = FLEXCleanDemangledName(@(demangled));
         free(demangled);
