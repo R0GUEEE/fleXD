@@ -47,6 +47,7 @@
 #import "FLEXWindowManagerController.h"
 #import "FLEXViewControllersViewController.h"
 #import "NSUserDefaults+FLEX.h"
+#import "FLEXToolbarStashMath.h"
 
 typedef NS_ENUM(NSUInteger, FLEXExplorerMode) {
     FLEXExplorerModeDefault,
@@ -118,10 +119,12 @@ typedef NS_ENUM(NSUInteger, FLEXExplorerMode) {
 
 static const CGFloat kToolbarSafeAreaPadding = 4.0;
 
-/// Horizontal fling speed (pt/s) past which a release stashes the toolbar against that edge.
-static const CGFloat kToolbarStashFlingVelocity = 800.0;
-/// Fraction of the safe-area width near each edge within which a slow release still stashes.
-static const CGFloat kToolbarStashEdgeZoneFraction = 0.15;
+/// Projected travel per (pt/s) of release velocity, matching the free-float
+/// UIDynamics decay (~ 1/resistance, resistance = 6.0). Starting value, tuned by feel.
+static const CGFloat kToolbarStashProjectionDeceleration = 1.0 / 6.0;
+/// How close to an edge the projected center must land to commit to a stash (pt).
+/// Starting value, tuned by feel.
+static const CGFloat kToolbarStashEdgeBand = 44.0;
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil {
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
@@ -777,32 +780,21 @@ static const CGFloat kToolbarStashEdgeZoneFraction = 0.15;
     return frame;
 }
 
-/// Decides whether a pan release should stash the toolbar, and against which edge.
-/// Stashes on a hard horizontal fling toward an edge, or on a release while the
-/// toolbar's center already sits within the edge zone near a side.
+/// Decides whether a pan release should stash the toolbar, and against which edge,
+/// by projecting the release velocity under linear decay: stashes if the projected
+/// center lands within the edge band of a side. A predominantly-vertical flick never stashes.
 - (FLEXToolbarStashEdge)stashEdgeForReleaseWithVelocity:(CGPoint)velocity {
-    // A predominantly vertical gesture is never a stash.
-    if (fabs(velocity.x) < fabs(velocity.y)) {
-        return FLEXToolbarStashEdgeNone;
-    }
-
     const CGRect safeArea = [self viewSafeArea];
-    const CGFloat centerX = CGRectGetMidX(self.explorerToolbar.frame);
-    const CGFloat edgeZone = CGRectGetWidth(safeArea) * kToolbarStashEdgeZoneFraction;
-    const CGFloat leftThreshold = CGRectGetMinX(safeArea) + edgeZone;
-    const CGFloat rightThreshold = CGRectGetMaxX(safeArea) - edgeZone;
-
-    const BOOL flingingLeft = velocity.x <= -kToolbarStashFlingVelocity;
-    const BOOL flingingRight = velocity.x >= kToolbarStashFlingVelocity;
-
-    if (flingingLeft || centerX < leftThreshold) {
-        return FLEXToolbarStashEdgeLeft;
-    }
-    if (flingingRight || centerX > rightThreshold) {
-        return FLEXToolbarStashEdgeRight;
-    }
-
-    return FLEXToolbarStashEdgeNone;
+    // Raw screen edges (not padded): we're deciding about the screen edge the pill
+    // would coast to, not the on-screen padded boundary.
+    return FLEXStashEdgeForRelease(
+        velocity,
+        CGRectGetMidX(self.explorerToolbar.frame),
+        CGRectGetMinX(safeArea),
+        CGRectGetMaxX(safeArea),
+        kToolbarStashEdgeBand,
+        kToolbarStashProjectionDeceleration
+    );
 }
 
 - (void)stashToolbarToEdge:(FLEXToolbarStashEdge)edge {
