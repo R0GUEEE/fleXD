@@ -922,7 +922,10 @@ static const CGFloat kToolbarStashDragCommitFraction = 0.5;
     // heading vertically, clamped so the peek sliver stays fully on-screen.
     const CGRect safeArea = [self viewSafeArea];
     const CGFloat minCenterY = CGRectGetMinY(safeArea) + kToolbarSafeAreaPadding + target.size.height / 2.0;
-    const CGFloat maxCenterY = CGRectGetMaxY(safeArea) - kToolbarSafeAreaPadding - target.size.height / 2.0;
+    // Unlike the draggable area, the stash also clears the bottom inset (home
+    // indicator) so the sliver can always be tapped/dragged back out.
+    const CGFloat maxCenterY = CGRectGetMaxY(safeArea) - self.view.safeAreaInsets.bottom
+        - kToolbarSafeAreaPadding - target.size.height / 2.0;
     const CGFloat targetCenterY = FLEXProjectedStashCenterY(
         CGRectGetMidY(self.explorerToolbar.frame), velocity.y,
         kToolbarStashProjectionDeceleration, minCenterY, maxCenterY
@@ -1271,8 +1274,12 @@ static BOOL FLEXIsDefaultSkippedView(UIView *view) {
 #pragma mark - Safe Area Handling
 
 - (CGRect)viewSafeArea {
+    // The general draggable area insets only the top (status bar / notch): the
+    // toolbar may drag and free-float all the way down to the bottom edge. Only
+    // *stashing* keeps clear of the home indicator (see -stashToolbarToEdge:…),
+    // so the draggable region can sit lower than the stashable region.
     const CGFloat topInset = self.view.safeAreaInsets.top;
-    const UIEdgeInsets safeAreaInsets = UIEdgeInsetsMake(topInset, 0, 0, 0);
+    const UIEdgeInsets safeAreaInsets = UIEdgeInsetsMake(topInset, 0.0, 0.0, 0.0);
     return UIEdgeInsetsInsetRect(self.view.bounds, safeAreaInsets);
 }
 
@@ -1316,7 +1323,11 @@ static BOOL FLEXIsDefaultSkippedView(UIView *view) {
         if (appKeyWindow) {
             const CGPoint pointInWindow = [appKeyWindow convertPoint:pointInWindowCoordinates fromView:nil];
             UIView *const hitView = [appKeyWindow hitTest:pointInWindow withEvent:nil];
-            if (hitView && (FLEXIsDefaultSkippedView(hitView) ||
+            // ...but a touch that's actually on our toolbar (e.g. a stashed
+            // sliver parked over a skipped app view) is always ours — never pass
+            // it through, or the sliver becomes impossible to grab back.
+            const BOOL onToolbar = CGRectContainsPoint(self.explorerToolbar.frame, pointInLocalCoordinates);
+            if (hitView && !onToolbar && (FLEXIsDefaultSkippedView(hitView) ||
                             (self.skippedViewPredicate && self.skippedViewPredicate(hitView)))) {
                 return NO;
             }
