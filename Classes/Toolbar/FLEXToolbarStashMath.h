@@ -71,3 +71,22 @@ static inline CGFloat FLEXProjectedStashCenterY(CGFloat centerY, CGFloat velocit
     if (projected > maxCenterY) return maxCenterY;
     return projected;
 }
+
+/// Which edge the toolbar is dragged past by more than `fraction` of its width
+/// (so releasing should stash), or None. Pure — unit-testable with no view.
+static inline FLEXToolbarStashEdge FLEXToolbarDragStashEdge(CGRect frame, CGFloat minX,
+                                                            CGFloat maxX, CGFloat fraction) {
+    const CGFloat width = frame.size.width;
+    if (width <= 0.0) {
+        return FLEXToolbarStashEdgeNone;
+    }
+    const CGFloat offLeft = minX - CGRectGetMinX(frame);   // amount past the left edge
+    const CGFloat offRight = CGRectGetMaxX(frame) - maxX;   // amount past the right edge
+    if (offLeft > width * fraction) {
+        return FLEXToolbarStashEdgeLeft;
+    }
+    if (offRight > width * fraction) {
+        return FLEXToolbarStashEdgeRight;
+    }
+    return FLEXToolbarStashEdgeNone;
+}

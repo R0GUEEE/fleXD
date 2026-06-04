@@ -83,4 +83,31 @@
     XCTAssertEqualWithAccuracy(FLEXProjectedStashCenterY(400, 0, 0.167, 100, 700), 400.0, 0.0001);
 }
 
+#pragma mark - FLEXToolbarDragStashEdge
+
+- (void)testDragStashNoneWhenOnScreen {
+    XCTAssertEqual(FLEXToolbarDragStashEdge(CGRectMake(10, 0, 300, 40), 0, 320, 0.5),
+                   FLEXToolbarStashEdgeNone);
+}
+- (void)testDragStashRightWhenMostlyPastRight {
+    // x=180 -> maxX(frame)=480, offRight=160 > 150
+    XCTAssertEqual(FLEXToolbarDragStashEdge(CGRectMake(180, 0, 300, 40), 0, 320, 0.5),
+                   FLEXToolbarStashEdgeRight);
+}
+- (void)testDragStashLeftWhenMostlyPastLeft {
+    // x=-160 -> offLeft=160 > 150
+    XCTAssertEqual(FLEXToolbarDragStashEdge(CGRectMake(-160, 0, 300, 40), 0, 320, 0.5),
+                   FLEXToolbarStashEdgeLeft);
+}
+- (void)testDragStashNoneBelowThreshold {
+    // x=140 -> maxX(frame)=440, offRight=120 < 150
+    XCTAssertEqual(FLEXToolbarDragStashEdge(CGRectMake(140, 0, 300, 40), 0, 320, 0.5),
+                   FLEXToolbarStashEdgeNone);
+}
+- (void)testDragStashExactlyHalfDoesNotCommit {
+    // x=170 -> offRight=150, not > 150 (strict)
+    XCTAssertEqual(FLEXToolbarDragStashEdge(CGRectMake(170, 0, 300, 40), 0, 320, 0.5),
+                   FLEXToolbarStashEdgeNone);
+}
+
 @end
