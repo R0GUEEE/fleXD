@@ -9,10 +9,11 @@ static BOOL FLEXObjectSupportsWeakReference(id object) {
     if (!object) return NO;
     Class cls = object_getClass(object);
     SEL sel = NSSelectorFromString(@"allowsWeakReference");
-    IMP base = class_getMethodImplementation(NSObject.class, sel);
+    IMP baseNSObject = class_getMethodImplementation([NSObject class], sel);
+    IMP baseNSProxy  = class_getMethodImplementation([NSProxy class], sel);
     IMP cur = class_getMethodImplementation(cls, sel);
-    if (cur == base) {
-        return YES; // not overridden; default NSObject behavior allows weak refs
+    if (cur == baseNSObject || cur == baseNSProxy) {
+        return YES; // not overridden; default behavior allows weak refs
     }
     return ((BOOL (*)(id, SEL))objc_msgSend)(object, sel);
 }
@@ -34,12 +35,13 @@ static BOOL FLEXAddressesContainAppFrame(NSArray<NSNumber *> *addresses) {
 @implementation FLEXNotificationRegistration {
     __weak id _observer;
     __weak id _observedObject;
+    NSArray<NSString *> *_symbolicatedBacktrace;
 }
 
 + (instancetype)registrationWithObserver:(id)observer
-                          selectorString:(NSString *)selectorString
-                                    name:(NSString *)name
-                                  object:(id)object
+                          selectorString:(nullable NSString *)selectorString
+                                    name:(nullable NSString *)name
+                                  object:(nullable id)object
                          returnAddresses:(NSArray<NSNumber *> *)returnAddresses {
     FLEXNotificationRegistration *reg = [self new];
     reg->_observerPointer = (uintptr_t)observer;
@@ -73,6 +75,7 @@ static BOOL FLEXAddressesContainAppFrame(NSArray<NSNumber *> *addresses) {
 }
 
 - (NSArray<NSString *> *)symbolicatedBacktrace {
+    if (_symbolicatedBacktrace) { return _symbolicatedBacktrace; }
     NSMutableArray<NSString *> *frames = [NSMutableArray array];
     for (NSNumber *addr in _returnAddresses) {
         void *ptr = (void *)(uintptr_t)addr.unsignedLongLongValue;
@@ -80,7 +83,9 @@ static BOOL FLEXAddressesContainAppFrame(NSArray<NSNumber *> *addresses) {
         if (dladdr(ptr, &info)) {
             NSString *image = info.dli_fname ? @(info.dli_fname).lastPathComponent : @"???";
             NSString *symbol = info.dli_sname ? @(info.dli_sname) : @"???";
-            unsigned long offset = (unsigned long)((uintptr_t)ptr - (uintptr_t)info.dli_saddr);
+            unsigned long offset = (info.dli_saddr && info.dli_sname)
+                ? (unsigned long)((uintptr_t)ptr - (uintptr_t)info.dli_saddr)
+                : 0;
             [frames addObject:[NSString stringWithFormat:@"%@  0x%016lx  %@ + %lu",
                 image, (unsigned long)(uintptr_t)ptr, symbol, offset]];
         } else {
@@ -88,7 +93,8 @@ static BOOL FLEXAddressesContainAppFrame(NSArray<NSNumber *> *addresses) {
                 (unsigned long)(uintptr_t)ptr]];
         }
     }
-    return frames;
+    _symbolicatedBacktrace = frames;
+    return _symbolicatedBacktrace;
 }
 
 @end

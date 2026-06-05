@@ -2,6 +2,11 @@
 #import <execinfo.h>
 #import "FLEXNotificationRegistration.h"
 
+@interface FLEXNoWeakObject : NSObject @end
+@implementation FLEXNoWeakObject
+- (BOOL)allowsWeakReference { return NO; }
+@end
+
 static NSArray<NSNumber *> *CaptureAddresses(void) {
     void *frames[64];
     int n = backtrace(frames, 64);
@@ -55,7 +60,18 @@ static NSArray<NSNumber *> *CaptureAddresses(void) {
     FLEXNotificationRegistration *reg = [FLEXNotificationRegistration
         registrationWithObserver:[NSObject new] selectorString:@"x"
         name:nil object:nil returnAddresses:CaptureAddresses()];
-    XCTAssertTrue(reg.isOurs); // this test code lives in the test bundle == main bundle
+    // In a no-host-app test target, mainBundle is the test bundle, so frames from this file satisfy the prefix check
+    XCTAssertTrue(reg.isOurs);
+}
+
+- (void)testUnknownStateWhenWeakUnsupported {
+    FLEXNoWeakObject *observer = [FLEXNoWeakObject new];
+    FLEXNotificationRegistration *reg = [FLEXNotificationRegistration
+        registrationWithObserver:observer selectorString:@"x"
+        name:nil object:nil returnAddresses:@[]];
+    XCTAssertFalse(reg.weakSupported);
+    XCTAssertEqual(reg.state, FLEXNotificationObserverStateUnknown);
+    XCTAssertNil(reg.observer);
 }
 
 @end
