@@ -44,9 +44,32 @@
 #import <mach-o/loader.h>
 #import <ImageIO/ImageIO.h>
 #import "FLEXFileBrowserSearchOperation.h"
+#import "FLEXFileBrowserCell.h"
 
-@interface FLEXFileBrowserTableViewCell : UITableViewCell
-@end
+static NSDateFormatter *FLEXFileBrowserDateFormatter(void) {
+    static NSDateFormatter *formatter = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        formatter = [NSDateFormatter new];
+        formatter.dateStyle = NSDateFormatterMediumStyle;
+        formatter.timeStyle = NSDateFormatterNoStyle;
+    });
+    return formatter;
+}
+
+static UIImage *FLEXFileBrowserFolderIcon(void) {
+    if (@available(iOS 13.0, *)) {
+        return [UIImage systemImageNamed:@"folder.fill"];
+    }
+    return nil;
+}
+
+static UIImage *FLEXFileBrowserDocumentIcon(void) {
+    if (@available(iOS 13.0, *)) {
+        return [UIImage systemImageNamed:@"doc.fill"];
+    }
+    return nil;
+}
 
 typedef NS_ENUM(NSUInteger, FLEXFileBrowserSortAttribute) {
     FLEXFileBrowserSortAttributeNone = 0,
@@ -77,7 +100,7 @@ typedef NS_ENUM(NSUInteger, FLEXFileBrowserSortAttribute) {
 }
 
 - (id)initWithPath:(NSString *)path {
-    self = [super init];
+    self = [super initWithStyle:UITableViewStylePlain];
     if (self) {
         self.path = path;
         self.title = [path lastPathComponent];
@@ -116,8 +139,8 @@ typedef NS_ENUM(NSUInteger, FLEXFileBrowserSortAttribute) {
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    [self.tableView registerClass:[FLEXFileBrowserTableViewCell class] forCellReuseIdentifier:@"textCell"];
-    [self.tableView registerClass:[FLEXFileBrowserTableViewCell class] forCellReuseIdentifier:@"imageCell"];
+    [self.tableView registerClass:[FLEXFileBrowserCell class] forCellReuseIdentifier:@"fileCell"];
+    self.tableView.rowHeight = 60.0;
 
     self.showsSearchBar = YES;
     self.searchBarDebounceInterval = kFLEXDebounceForAsyncSearch;
@@ -225,34 +248,38 @@ typedef NS_ENUM(NSUInteger, FLEXFileBrowserSortAttribute) {
     NSString *fullPath = [self filePathAtIndexPath:indexPath];
     NSDictionary<NSString *, id> *attributes = [NSFileManager.defaultManager attributesOfItemAtPath:fullPath error:NULL];
     BOOL isDirectory = [attributes.fileType isEqual:NSFileTypeDirectory];
-    NSString *subtitle = nil;
-    if (isDirectory) {
-        NSUInteger count = [NSFileManager.defaultManager contentsOfDirectoryAtPath:fullPath error:NULL].count;
-        subtitle = [NSString stringWithFormat:@"%lu item%@", (unsigned long)count, (count == 1 ? @"" : @"s")];
-    } else {
-        NSString *sizeString = [NSByteCountFormatter stringFromByteCount:attributes.fileSize countStyle:NSByteCountFormatterCountStyleFile];
-        subtitle = [NSString stringWithFormat:@"%@ - %@", sizeString, attributes.fileModificationDate ?: @"Never modified"];
-    }
 
-    // Separate image and text only cells because otherwise the separator lines get out-of-whack on image cells reused with text only.
-    UIImage *image = [UIImage imageWithContentsOfFile:fullPath];
-    NSString *cellIdentifier = image ? @"imageCell" : @"textCell";
-
-    FLEXFileBrowserTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier forIndexPath:indexPath];
-    cell.textLabel.font = UIFont.flex_defaultTableCellFont;
-    cell.detailTextLabel.font = UIFont.flex_defaultTableCellFont;
-    cell.detailTextLabel.textColor = UIColor.grayColor;
+    FLEXFileBrowserCell *cell = [tableView dequeueReusableCellWithIdentifier:@"fileCell" forIndexPath:indexPath];
+    cell.representedPath = fullPath;
+    cell.titleLabel.text = fullPath.lastPathComponent;
+    cell.subtitleLabel.text = [self subtitleForPath:fullPath attributes:attributes isDirectory:isDirectory];
     cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
-    NSString *cellTitle = [fullPath lastPathComponent];
-    cell.textLabel.text = cellTitle;
-    cell.detailTextLabel.text = subtitle;
 
-    if (image) {
-        cell.imageView.contentMode = UIViewContentModeScaleAspectFit;
-        cell.imageView.image = image;
+    if (isDirectory) {
+        [cell setSymbolIcon:FLEXFileBrowserFolderIcon() tintColor:UIColor.systemBlueColor];
+    } else {
+        [cell setSymbolIcon:FLEXFileBrowserDocumentIcon() tintColor:UIColor.systemGrayColor];
     }
 
     return cell;
+}
+
+- (NSString *)subtitleForPath:(NSString *)path
+                   attributes:(NSDictionary<NSString *, id> *)attributes
+                  isDirectory:(BOOL)isDirectory {
+    if (isDirectory) {
+        NSUInteger count = [NSFileManager.defaultManager contentsOfDirectoryAtPath:path error:NULL].count;
+        return [NSString stringWithFormat:@"%lu item%@", (unsigned long)count, (count == 1 ? @"" : @"s")];
+    }
+
+    NSString *sizeString = [NSByteCountFormatter stringFromByteCount:attributes.fileSize
+                                                          countStyle:NSByteCountFormatterCountStyleFile];
+    NSDate *modified = attributes.fileModificationDate;
+    if (modified) {
+        NSString *dateString = [FLEXFileBrowserDateFormatter() stringFromDate:modified];
+        return [NSString stringWithFormat:@"%@ · %@", dateString, sizeString];
+    }
+    return sizeString;
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -375,7 +402,10 @@ typedef NS_ENUM(NSUInteger, FLEXFileBrowserSortAttribute) {
             initWithRootViewController:drillInViewController];
         nav.modalPresentationStyle = UIModalPresentationFullScreen;
         if (@available(iOS 18.0, *)) {
-            UIView *source = [tableView cellForRowAtIndexPath:indexPath].imageView;
+            UITableViewCell *selectedCell = [tableView cellForRowAtIndexPath:indexPath];
+            UIView *source = [selectedCell isKindOfClass:[FLEXFileBrowserCell class]]
+                ? ((FLEXFileBrowserCell *)selectedCell).iconImageView
+                : selectedCell.imageView;
             nav.preferredTransition = [UIViewControllerTransition
                 zoomWithOptions:nil
                 sourceViewProvider:^UIView *(UIZoomTransitionSourceViewProviderContext *ctx) {
@@ -562,10 +592,5 @@ contextMenuConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath
 - (NSString *)filePathAtIndexPath:(NSIndexPath *)indexPath {
     return self.searchController.isActive ? self.searchPaths[indexPath.row] : self.childPaths[indexPath.row];
 }
-
-@end
-
-
-@implementation FLEXFileBrowserTableViewCell
 
 @end
