@@ -13,6 +13,7 @@
 @implementation FLEXNotificationObserverSection
 
 - (void)setAppOnly:(BOOL)appOnly {
+    if (_appOnly == appOnly) return;
     _appOnly = appOnly;
     [self reloadData];
 }

@@ -31,17 +31,23 @@
     self.searchController.searchBar.scopeButtonTitles = @[@"App", @"All"];
     self.observerSection.appOnly = YES;
 
-    self.navigationItem.rightBarButtonItems = @[
-        [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemTrash
-            target:self action:@selector(clearTapped)],
-        [[UIBarButtonItem alloc] initWithTitle:(FLEXNotificationMonitor.enabled ? @"On" : @"Off")
-            style:UIBarButtonItemStylePlain target:self action:@selector(toggleTapped:)],
-    ];
+    UIBarButtonItem *trashButton = [[UIBarButtonItem alloc]
+        initWithBarButtonSystemItem:UIBarButtonSystemItemTrash
+        target:self action:@selector(clearTapped)];
+    NSString *toggleTitle = FLEXNotificationMonitor.enabled ? @"Disable" : @"Enable";
+    UIBarButtonItem *toggleButton = [[UIBarButtonItem alloc]
+        initWithTitle:toggleTitle
+        style:UIBarButtonItemStylePlain target:self action:@selector(toggleTapped:)];
+    [self addToolbarItems:@[trashButton, toggleButton]];
 
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(recorderUpdated)
         name:kFLEXNotificationRecorderUpdatedNotification object:nil];
 
     [self showEnablePromptIfNeeded];
+}
+
+- (void)dealloc {
+    [NSNotificationCenter.defaultCenter removeObserver:self];
 }
 
 - (NSArray<FLEXTableViewSection *> *)makeSections {
@@ -64,7 +70,7 @@
 - (void)toggleTapped:(UIBarButtonItem *)sender {
     BOOL nowOn = !FLEXNotificationMonitor.enabled;
     FLEXNotificationMonitor.enabled = nowOn;
-    sender.title = nowOn ? @"On" : @"Off";
+    sender.title = nowOn ? @"Disable" : @"Enable";
     [self showEnablePromptIfNeeded];
 }
 
@@ -80,7 +86,6 @@
 
 - (void)searchBar:(UISearchBar *)searchBar selectedScopeButtonIndexDidChange:(NSInteger)selectedScope {
     self.observerSection.appOnly = (selectedScope == 0);
-    [self reloadData];
     [super searchBar:searchBar selectedScopeButtonIndexDidChange:selectedScope];
 }
 
