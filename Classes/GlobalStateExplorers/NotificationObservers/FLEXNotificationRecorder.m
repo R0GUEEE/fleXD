@@ -32,6 +32,7 @@ NSString *const kFLEXNotificationRecorderUpdatedNotification = @"kFLEXNotificati
     return self;
 }
 
+// Must NOT be called from within self.queue — the dispatch_sync would deadlock.
 - (NSArray<FLEXNotificationRegistration *> *)registrations {
     return FLEXSync(self.queue, self.mutableRegistrations.copy);
 }
@@ -76,11 +77,13 @@ NSString *const kFLEXNotificationRecorderUpdatedNotification = @"kFLEXNotificati
 
 - (void)clear {
     dispatch_async(self.queue, ^{
+        if (!self.mutableRegistrations.count) return;
         [self.mutableRegistrations removeAllObjects];
         [self postUpdate];
     });
 }
 
+// Called from within self.queue; dispatches the notification to the main thread.
 - (void)postUpdate {
     dispatch_async(dispatch_get_main_queue(), ^{
         [NSNotificationCenter.defaultCenter

@@ -51,4 +51,36 @@
     XCTAssertEqual(_recorder.registrations.count, 0);
 }
 
+- (void)testRemoveByObjectPointerMatchesOnlyThatObject {
+    NSObject *objX = [NSObject new];
+    NSObject *objY = [NSObject new];
+    [_recorder addRegistration:[self regFor:_observerA name:@"N1" object:objX]];
+    [_recorder addRegistration:[self regFor:_observerA name:@"N1" object:objY]];
+    [_recorder removeRegistrationsForObserverPointer:(uintptr_t)_observerA
+        name:nil objectPointer:(uintptr_t)objX];
+    XCTAssertEqual(_recorder.registrations.count, 1);
+    XCTAssertEqual(_recorder.registrations.firstObject.observedObjectPointer, (uintptr_t)objY);
+}
+
+- (void)testRemoveWithNilNameRemovesAllForObserver {
+    [_recorder addRegistration:[self regFor:_observerA name:@"N1" object:nil]];
+    [_recorder addRegistration:[self regFor:_observerA name:@"N2" object:nil]];
+    [_recorder removeRegistrationsForObserverPointer:(uintptr_t)_observerA name:nil objectPointer:0];
+    XCTAssertEqual(_recorder.registrations.count, 0);
+}
+
+- (void)testUpdateNotificationPostedOnMain {
+    XCTestExpectation *exp = [self expectationWithDescription:@"update notification"];
+    id token = [NSNotificationCenter.defaultCenter
+        addObserverForName:kFLEXNotificationRecorderUpdatedNotification
+                    object:_recorder queue:NSOperationQueue.mainQueue
+                usingBlock:^(NSNotification *n) {
+                    XCTAssertTrue(NSThread.isMainThread);
+                    [exp fulfill];
+                }];
+    [_recorder addRegistration:[self regFor:_observerA name:@"N1" object:nil]];
+    [self waitForExpectations:@[exp] timeout:1.0];
+    [NSNotificationCenter.defaultCenter removeObserver:token];
+}
+
 @end
