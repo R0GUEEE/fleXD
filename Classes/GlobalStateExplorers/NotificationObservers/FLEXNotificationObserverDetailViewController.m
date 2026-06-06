@@ -1,7 +1,6 @@
 #import "FLEXNotificationObserverDetailViewController.h"
 #import "FLEXNotificationRegistration.h"
 #import "FLEXMutableListSection.h"
-#import "FLEXTableView.h"
 
 @implementation FLEXNotificationObserverDetailViewController {
     FLEXNotificationRegistration *_registration;
