@@ -516,12 +516,16 @@ CGFloat const kFLEXDebounceForExpensiveIO = 0.5;
 }
 
 - (void)showTabSwitcher {
-    // Make FLEX's window key so the host app's first responder (e.g. an active
-    // search bar) resigns; otherwise its keyboard / AutoFill bar stays over the
-    // switcher and eats every touch. FLEXExplorerViewController does this in its
-    // -presentViewController: override, but this presents from within the explorer
-    // stack and therefore bypasses that override.
+    // Dismiss any active keyboard before presenting. A focused search bar — either
+    // this explorer's own (showsSearchBar) or the host app's — otherwise stays first
+    // responder, and its keyboard remains over the switcher sheet, covering the
+    // bottom toolbar (the Tabs|Bookmarks segment) and swallowing its touches. We
+    // resign across every window in the scene so it works regardless of which window
+    // owns the responder. (makeKeyWindow alone does not force the responder to resign.)
     [self.view.window makeKeyWindow];
+    for (UIWindow *window in self.view.window.windowScene.windows) {
+        [window endEditing:YES];
+    }
 
     UINavigationController *nav = [[UINavigationController alloc]
         initWithRootViewController:[FLEXTabsViewController new]
