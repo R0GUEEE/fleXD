@@ -58,7 +58,7 @@ typedef NS_ENUM(NSUInteger, FLEXSwitcherMode) {
 
 @property (nonatomic, copy) NSArray *bookmarks;
 @property (nonatomic) FLEXSwitcherMode mode;
-@property (nonatomic) UISegmentedControl *modeControl;
+@property (nonatomic, strong) UISegmentedControl *modeControl;
 
 @property (nonatomic, readonly) FLEXExplorerViewController *corePresenter;
 @end
@@ -213,9 +213,9 @@ typedef NS_ENUM(NSUInteger, FLEXSwitcherMode) {
 
 - (void)modeChanged:(UISegmentedControl *)sender {
     if (self.editing) {
-        self.editing = NO; // exit editing to avoid cross-mode selection state
+        [self setEditing:NO animated:NO]; // exit editing to avoid cross-mode selection state
     }
-    self.mode = sender.selectedSegmentIndex;
+    self.mode = (FLEXSwitcherMode)sender.selectedSegmentIndex;
     [self reloadData:NO];
     [self.tableView reloadData];
     [self setupDefaultBarItems];
