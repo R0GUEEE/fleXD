@@ -38,7 +38,6 @@
 #import "FLEXScopeCarousel.h"
 #import "FLEXTableView.h"
 #import "FLEXUtility.h"
-#import "FLEXResources.h"
 #import "UIBarButtonItem+FLEX.h"
 #import <objc/runtime.h>
 
