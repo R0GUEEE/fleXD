@@ -99,8 +99,9 @@
         ];
         self.selectItem    = [FLEXExplorerToolbarItem itemWithTitle:@"Select" image:
             [UIImage systemImageNamed:@"hand.rays.fill" withConfiguration:selectConfig]];
-        self.recentItem    = [FLEXExplorerToolbarItem itemWithTitle:@"Recent" image:
-            [UIImage systemImageNamed:@"clock.arrow.circlepath" withConfiguration:symbolConfig]];
+        // Formerly "Recent" (resumed the active tab). Now opens the tab/bookmark switcher.
+        self.recentItem    = [FLEXExplorerToolbarItem itemWithTitle:@"Tabs" image:
+            [UIImage systemImageNamed:@"square.on.square" withConfiguration:symbolConfig]];
         self.moveItem      = [FLEXExplorerToolbarItem itemWithTitle:@"Move" image:
             [UIImage systemImageNamed:@"arrow.up.and.down.and.arrow.left.and.right" withConfiguration:symbolConfig]
             sibling:self.recentItem];

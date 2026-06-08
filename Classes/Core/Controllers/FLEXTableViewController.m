@@ -34,7 +34,6 @@
 
 #import "FLEXTableViewController.h"
 #import "FLEXExplorerViewController.h"
-#import "FLEXBookmarksViewController.h"
 #import "FLEXTabsViewController.h"
 #import "FLEXScopeCarousel.h"
 #import "FLEXTableView.h"
@@ -218,11 +217,8 @@ CGFloat const kFLEXDebounceForExpensiveIO = 0.5;
     self.tableView.estimatedSectionFooterHeight = 0;
 
     _shareToolbarItem = FLEXBarButtonItemSystem(Action, self, @selector(shareButtonPressed:));
-    _bookmarksToolbarItem = [UIBarButtonItem
-        flex_itemWithImage:FLEXResources.bookmarksIcon target:self action:@selector(showBookmarks)
-    ];
     _openTabsToolbarItem = [UIBarButtonItem
-        flex_itemWithImage:FLEXResources.openTabsIcon target:self action:@selector(showTabSwitcher)
+        flex_itemWithImage:[UIImage systemImageNamed:@"square.on.square"] target:self action:@selector(showTabSwitcher)
     ];
 
     self.leftmostToolbarItem = UIBarButtonItem.flex_fixedSpace;
@@ -323,7 +319,6 @@ CGFloat const kFLEXDebounceForExpensiveIO = 0.5;
             self.middleLeftToolbarItem,
             UIBarButtonItem.flex_flexibleSpace,
             self.middleToolbarItem,
-            self.bookmarksToolbarItem,
             self.openTabsToolbarItem,
         ];
     } else {
@@ -333,8 +328,6 @@ CGFloat const kFLEXDebounceForExpensiveIO = 0.5;
             self.middleLeftToolbarItem,
             UIBarButtonItem.flex_flexibleSpace,
             self.middleToolbarItem,
-            UIBarButtonItem.flex_flexibleSpace,
-            self.bookmarksToolbarItem,
             UIBarButtonItem.flex_flexibleSpace,
             self.openTabsToolbarItem,
         ];
@@ -514,13 +507,6 @@ CGFloat const kFLEXDebounceForExpensiveIO = 0.5;
     searchBar.searchTextField.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
     // Inset the text field 20pt from each edge to match inset-grouped table content
     searchBar.layoutMargins = UIEdgeInsetsMake(0, 20, 0, 20);
-}
-
-- (void)showBookmarks {
-    UINavigationController *nav = [[UINavigationController alloc]
-        initWithRootViewController:[FLEXBookmarksViewController new]
-    ];
-    [self presentViewController:nav animated:YES completion:nil];
 }
 
 - (void)showTabSwitcher {

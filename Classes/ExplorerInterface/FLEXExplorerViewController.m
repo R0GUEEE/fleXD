@@ -509,8 +509,10 @@ static const CGFloat kToolbarStashDragCommitFraction = 0.5;
 }
 
 - (void)recentButtonTapped:(FLEXExplorerToolbarItem *)sender {
-    NSAssert(FLEXTabList.sharedList.activeTab, @"Must have active tab");
-    [self presentViewController:FLEXTabList.sharedList.activeTab animated:YES completion:nil];
+    // Opens the tab/bookmark switcher (formerly resumed the active tab).
+    [self presentViewController:[[UINavigationController alloc]
+        initWithRootViewController:[FLEXTabsViewController new]
+    ] animated:YES completion:nil];
 }
 
 - (void)moveButtonTapped:(FLEXExplorerToolbarItem *)sender {
@@ -536,11 +538,11 @@ static const CGFloat kToolbarStashDragCommitFraction = 0.5;
     toolbar.moveItem.enabled = hasSelectedObject;
     toolbar.moveItem.selected = self.currentMode == FLEXExplorerModeMove;
 
-    // Recent only enabled when we have a last active tab
+    // Tabs button is always enabled — the switcher can open a new tab or show bookmarks
     if (!self.presentedViewController) {
-        toolbar.recentItem.enabled = FLEXTabList.sharedList.activeTab != nil;
+        toolbar.recentItem.enabled = YES;
     } else {
-        toolbar.recentItem.enabled = NO;
+        toolbar.recentItem.enabled = YES;
     }
 }
 
@@ -578,11 +580,6 @@ static const CGFloat kToolbarStashDragCommitFraction = 0.5;
     ];
     self.changeSelectedViewPanGR.delegate = self;
     [toolbar.selectedViewDescriptionContainer addGestureRecognizer:self.changeSelectedViewPanGR];
-
-    // Long press gesture to present tabs manager
-    [toolbar.globalsItem addGestureRecognizer:[[UILongPressGestureRecognizer alloc]
-        initWithTarget:self action:@selector(handleToolbarShowTabsGesture:)
-    ]];
 
     // Long press gesture to present window manager
     [toolbar.selectItem addGestureRecognizer:[[UILongPressGestureRecognizer alloc]
@@ -985,15 +982,6 @@ static const CGFloat kToolbarStashDragCommitFraction = 0.5;
         [self presentViewController:
             [FLEXNavigationController withRootViewController:topStackVC]
         animated:YES completion:nil];
-    }
-}
-
-- (void)handleToolbarShowTabsGesture:(UILongPressGestureRecognizer *)sender {
-    if (sender.state == UIGestureRecognizerStateBegan) {
-        // Don't use FLEXNavigationController because the tab viewer itself is not a tab
-        [super presentViewController:[[UINavigationController alloc]
-            initWithRootViewController:[FLEXTabsViewController new]
-        ] animated:YES completion:nil];
     }
 }
 

@@ -168,7 +168,6 @@ extern CGFloat const kFLEXDebounceForExpensiveIO;
 - (void)setupToolbarItems;
 
 @property (nonatomic, readonly) UIBarButtonItem *shareToolbarItem;
-@property (nonatomic, readonly) UIBarButtonItem *bookmarksToolbarItem;
 @property (nonatomic, readonly) UIBarButtonItem *openTabsToolbarItem;
 
 /// Whether or not to display the "share" icon in the middle of the toolbar. NO by default.
