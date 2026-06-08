@@ -45,6 +45,7 @@
 #import <ImageIO/ImageIO.h>
 #import "FLEXFileBrowserSearchOperation.h"
 #import "FLEXFileBrowserCell.h"
+#import "UIBarButtonItem+FLEX.h"
 
 static NSDateFormatter *FLEXFileBrowserDateFormatter(void) {
     static NSDateFormatter *formatter = nil;
@@ -259,7 +260,15 @@ typedef NS_ENUM(NSUInteger, FLEXFileBrowserSortAttribute) {
                                                                 target:self
                                                                 action:@selector(sortDidTouchUpInside:)];
     self.sortToolbarItem = sortItem;
-    [self addToolbarItems:@[sortItem]];
+    // Place Sort at the leading edge of the toolbar. addToolbarItems fills the
+    // slots middle → middle-left → leftmost, so pad with empty leading slots to
+    // push Sort to the edge. The iOS 26 layout omits the leftmost slot, so the
+    // middle-left slot is the leading position there and one pad suffices.
+    if (@available(iOS 26.0, *)) {
+        [self addToolbarItems:@[UIBarButtonItem.flex_fixedSpace, sortItem]];
+    } else {
+        [self addToolbarItems:@[UIBarButtonItem.flex_fixedSpace, UIBarButtonItem.flex_fixedSpace, sortItem]];
+    }
 
     if (@available(iOS 14.0, *)) {
         // Present the options as a button-anchored menu instead of an action sheet.
