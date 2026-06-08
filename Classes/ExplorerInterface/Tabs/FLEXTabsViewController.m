@@ -42,13 +42,23 @@
 #import "UIBarButtonItem+FLEX.h"
 #import "FLEXExplorerViewController.h"
 #import "FLEXGlobalsViewController.h"
-#import "FLEXBookmarksViewController.h"
+#import "FLEXObjectExplorerFactory.h"
+#import "FLEXRuntimeUtility.h"
+
+typedef NS_ENUM(NSUInteger, FLEXSwitcherMode) {
+    FLEXSwitcherModeTabs = 0,
+    FLEXSwitcherModeBookmarks = 1,
+};
 
 @interface FLEXTabsViewController ()
 @property (nonatomic, copy) NSArray<UINavigationController *> *openTabs;
 @property (nonatomic, copy) NSArray<UIImage *> *tabSnapshots;
 @property (nonatomic) NSInteger activeIndex;
 @property (nonatomic) BOOL presentNewActiveTabOnDismiss;
+
+@property (nonatomic, copy) NSArray *bookmarks;
+@property (nonatomic) FLEXSwitcherMode mode;
+@property (nonatomic) UISegmentedControl *modeControl;
 
 @property (nonatomic, readonly) FLEXExplorerViewController *corePresenter;
 @end
@@ -64,11 +74,16 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    self.title = @"Open Tabs";
     self.navigationController.hidesBarsOnSwipe = NO;
     self.tableView.allowsMultipleSelectionDuringEditing = YES;
 
+    self.modeControl = [[UISegmentedControl alloc] initWithItems:@[@"Tabs", @"Bookmarks"]];
+    self.modeControl.selectedSegmentIndex = FLEXSwitcherModeTabs;
+    [self.modeControl addTarget:self action:@selector(modeChanged:)
+              forControlEvents:UIControlEventValueChanged];
+
     [self reloadData:NO];
+    [self updateTitle];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -79,8 +94,7 @@
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
 
-    // Instead of updating the active snapshot before we present,
-    // we update it after we present to avoid pre-presenation latency
+    // Update the active tab snapshot after presenting to avoid pre-presentation latency
     dispatch_async(dispatch_get_main_queue(), ^{
         [FLEXTabList.sharedList updateSnapshotForActiveTab];
         [self reloadData:NO];
@@ -91,6 +105,14 @@
 
 #pragma mark - Private
 
+- (void)updateTitle {
+    self.title = (self.mode == FLEXSwitcherModeTabs) ? @"Tabs" : @"Bookmarks";
+}
+
+- (NSInteger)currentListCount {
+    return (self.mode == FLEXSwitcherModeTabs) ? self.openTabs.count : self.bookmarks.count;
+}
+
 /// @param trackActiveTabDelta whether to check if the active
 /// tab changed and needs to be presented upon "Done" dismissal.
 /// @return whether the active tab changed or not (if there are any tabs left)
@@ -98,60 +120,59 @@
     BOOL activeTabDidChange = NO;
     FLEXTabList *list = FLEXTabList.sharedList;
 
-    // Flag to enable check to determine whether
     if (trackActiveTabDelta) {
         NSInteger oldActiveIndex = self.activeIndex;
         if (oldActiveIndex != list.activeTabIndex && list.activeTabIndex != NSNotFound) {
             self.presentNewActiveTabOnDismiss = YES;
             activeTabDidChange = YES;
         } else if (self.presentNewActiveTabOnDismiss) {
-            // If we had something to present before, now we don't
-            // (i.e. activeTabIndex == NSNotFound)
             self.presentNewActiveTabOnDismiss = NO;
         }
     }
 
-    // We assume the tabs aren't going to change out from under us, since
-    // presenting any other tool via keyboard shortcuts should dismiss us first
     self.openTabs = list.openTabs;
     self.tabSnapshots = list.openTabSnapshots;
     self.activeIndex = list.activeTabIndex;
+    self.bookmarks = FLEXBookmarkManager.bookmarks;
 
     return activeTabDidChange;
 }
 
 - (void)reloadActiveTabRowIfChanged:(BOOL)activeTabChanged {
-    // Refresh the newly active tab row if needed
     if (activeTabChanged) {
-        NSIndexPath *active = [NSIndexPath
-           indexPathForRow:self.activeIndex inSection:0
-        ];
+        NSIndexPath *active = [NSIndexPath indexPathForRow:self.activeIndex inSection:0];
         [self.tableView reloadRowsAtIndexPaths:@[active] withRowAnimation:UITableViewRowAnimationNone];
     }
 }
 
 - (void)setupDefaultBarItems {
     self.navigationItem.rightBarButtonItem = FLEXBarButtonItemSystem(Done, self, @selector(dismissAnimated));
-    self.toolbarItems = @[
-        UIBarButtonItem.flex_fixedSpace,
-        UIBarButtonItem.flex_flexibleSpace,
-        FLEXBarButtonItemSystem(Add, self, @selector(addTabButtonPressed:)),
-        UIBarButtonItem.flex_flexibleSpace,
-        FLEXBarButtonItemSystem(Edit, self, @selector(toggleEditing)),
-    ];
 
-    // Disable editing if no tabs available
-    self.toolbarItems.lastObject.enabled = self.openTabs.count > 0;
+    UIBarButtonItem *segment = [[UIBarButtonItem alloc] initWithCustomView:self.modeControl];
+    UIBarButtonItem *add = FLEXBarButtonItemSystem(Add, self, @selector(addTabButtonPressed:));
+    UIBarButtonItem *edit = FLEXBarButtonItemSystem(Edit, self, @selector(toggleEditing));
+
+    // New Tab only applies to the Tabs segment
+    add.enabled = (self.mode == FLEXSwitcherModeTabs);
+    // Disable editing if the current list is empty
+    edit.enabled = [self currentListCount] > 0;
+
+    self.toolbarItems = @[
+        add,
+        UIBarButtonItem.flex_flexibleSpace,
+        segment,
+        UIBarButtonItem.flex_flexibleSpace,
+        edit,
+    ];
 }
 
 - (void)setupEditingBarItems {
     self.navigationItem.rightBarButtonItem = nil;
+    NSString *clearTitle = (self.mode == FLEXSwitcherModeTabs) ? @"Close All" : @"Remove All";
     self.toolbarItems = @[
-        [UIBarButtonItem flex_itemWithTitle:@"Close All" target:self action:@selector(closeAllButtonPressed:)],
+        [UIBarButtonItem flex_itemWithTitle:clearTitle target:self action:@selector(closeAllButtonPressed:)],
         UIBarButtonItem.flex_flexibleSpace,
-        [UIBarButtonItem flex_disabledSystemItem:UIBarButtonSystemItemAdd],
-        UIBarButtonItem.flex_flexibleSpace,
-        // We use a non-system done item because we change its title dynamically
+        // Non-system done item because we change its title dynamically
         [UIBarButtonItem flex_doneStyleitemWithTitle:@"Done" target:self action:@selector(toggleEditing)]
     ];
 
@@ -159,8 +180,6 @@
 }
 
 - (FLEXExplorerViewController *)corePresenter {
-    // We must be presented by a FLEXExplorerViewController, or presented
-    // by another view controller that was presented by FLEXExplorerViewController
     FLEXExplorerViewController *presenter = (id)self.presentingViewController;
     presenter = (id)presenter.presentingViewController ?: presenter;
     NSAssert(
@@ -170,8 +189,38 @@
     return presenter;
 }
 
+- (void)openBookmark:(id)selectedObject {
+    UIViewController *explorer = [FLEXObjectExplorerFactory explorerViewControllerForObject:selectedObject];
+    if ([self.presentingViewController isKindOfClass:[FLEXNavigationController class]]) {
+        // Presented on an existing navigation stack: dismiss myself and push there
+        UINavigationController *presenter = (id)self.presentingViewController;
+        [presenter dismissViewControllerAnimated:YES completion:^{
+            [presenter pushViewController:explorer animated:YES];
+        }];
+    } else {
+        // Dismiss myself and present the explorer as a new tab
+        UIViewController *presenter = self.corePresenter;
+        [presenter dismissViewControllerAnimated:YES completion:^{
+            [presenter presentViewController:[FLEXNavigationController
+                withRootViewController:explorer
+            ] animated:YES completion:nil];
+        }];
+    }
+}
+
 
 #pragma mark Button Actions
+
+- (void)modeChanged:(UISegmentedControl *)sender {
+    if (self.editing) {
+        self.editing = NO; // exit editing to avoid cross-mode selection state
+    }
+    self.mode = sender.selectedSegmentIndex;
+    [self reloadData:NO];
+    [self.tableView reloadData];
+    [self setupDefaultBarItems];
+    [self updateTitle];
+}
 
 - (void)dismissAnimated {
     if (self.presentNewActiveTabOnDismiss) {
@@ -185,7 +234,7 @@
         // The only tab was closed, so dismiss everything
         [self.corePresenter dismissViewControllerAnimated:YES completion:nil];
     } else {
-        // Simple dismiss with the same active tab, only dismiss myself
+        // Simple dismiss, only dismiss myself
         [self dismissViewControllerAnimated:YES completion:nil];
     }
 }
@@ -199,48 +248,31 @@
     } else {
         [self setupDefaultBarItems];
 
-        // Get index set of tabs to close
         NSMutableIndexSet *indexes = [NSMutableIndexSet new];
         for (NSIndexPath *ip in selected) {
             [indexes addIndex:ip.row];
         }
 
         if (selected.count) {
-            // Close tabs and update data source
-            [FLEXTabList.sharedList closeTabsAtIndexes:indexes];
-            BOOL activeTabChanged = [self reloadData:YES];
-
-            // Remove deleted rows
-            [self.tableView deleteRowsAtIndexPaths:selected withRowAnimation:UITableViewRowAnimationAutomatic];
-
-            // Refresh the newly active tab row if needed
-            [self reloadActiveTabRowIfChanged:activeTabChanged];
+            if (self.mode == FLEXSwitcherModeTabs) {
+                [FLEXTabList.sharedList closeTabsAtIndexes:indexes];
+                BOOL activeTabChanged = [self reloadData:YES];
+                [self.tableView deleteRowsAtIndexPaths:selected withRowAnimation:UITableViewRowAnimationAutomatic];
+                [self reloadActiveTabRowIfChanged:activeTabChanged];
+            } else {
+                [FLEXBookmarkManager.bookmarks removeObjectsAtIndexes:indexes];
+                [self reloadData:NO];
+                [self.tableView deleteRowsAtIndexPaths:selected withRowAnimation:UITableViewRowAnimationAutomatic];
+            }
         }
     }
 }
 
 - (void)addTabButtonPressed:(UIBarButtonItem *)sender {
-    if (FLEXBookmarkManager.bookmarks.count) {
-        [FLEXAlert makeSheet:^(FLEXAlert *make) {
-            make.title(@"New Tab");
-            make.button(@"Main Menu").handler(^(NSArray<NSString *> *strings) {
-                [self addTabAndDismiss:[FLEXNavigationController
-                    withRootViewController:[FLEXGlobalsViewController new]
-                ]];
-            });
-            make.button(@"Choose from Bookmarks").handler(^(NSArray<NSString *> *strings) {
-                [self presentViewController:[FLEXNavigationController
-                    withRootViewController:[FLEXBookmarksViewController new]
-                ] animated:YES completion:nil];
-            });
-            make.button(@"Cancel").cancelStyle();
-        } showFrom:self source:sender];
-    } else {
-        // No bookmarks, just open the main menu
-        [self addTabAndDismiss:[FLEXNavigationController
-            withRootViewController:[FLEXGlobalsViewController new]
-        ]];
-    }
+    // New tabs always start at the Main Menu; bookmarks are one segment away.
+    [self addTabAndDismiss:[FLEXNavigationController
+        withRootViewController:[FLEXGlobalsViewController new]
+    ]];
 }
 
 - (void)addTabAndDismiss:(UINavigationController *)newTab {
@@ -252,8 +284,10 @@
 
 - (void)closeAllButtonPressed:(UIBarButtonItem *)sender {
     [FLEXAlert makeSheet:^(FLEXAlert *make) {
-        NSInteger count = self.openTabs.count;
-        NSString *title = FLEXPluralFormatString(count, @"Close %@ tabs", @"Close %@ tab");
+        NSInteger count = [self currentListCount];
+        NSString *title = (self.mode == FLEXSwitcherModeTabs)
+            ? FLEXPluralFormatString(count, @"Close %@ tabs", @"Close %@ tab")
+            : FLEXPluralFormatString(count, @"Remove %@ bookmarks", @"Remove %@ bookmark");
         make.button(title).destructiveStyle().handler(^(NSArray<NSString *> *strings) {
             [self closeAll];
             [self toggleEditing];
@@ -263,13 +297,16 @@
 }
 
 - (void)closeAll {
-    NSInteger rowCount = self.openTabs.count;
+    NSInteger rowCount = [self currentListCount];
 
-    // Close tabs and update data source
-    [FLEXTabList.sharedList closeAllTabs];
-    [self reloadData:YES];
+    if (self.mode == FLEXSwitcherModeTabs) {
+        [FLEXTabList.sharedList closeAllTabs];
+        [self reloadData:YES];
+    } else {
+        [FLEXBookmarkManager.bookmarks removeAllObjects];
+        [self reloadData:NO];
+    }
 
-    // Delete rows from table view
     NSArray<NSIndexPath *> *allRows = [NSArray flex_forEachUpTo:rowCount map:^id(NSUInteger row) {
         return [NSIndexPath indexPathForRow:row inSection:0];
     }];
@@ -280,27 +317,30 @@
 #pragma mark - Table View Data Source
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return self.openTabs.count;
+    return [self currentListCount];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:kFLEXDetailCell forIndexPath:indexPath];
 
-    UINavigationController *tab = self.openTabs[indexPath.row];
-    cell.imageView.image = self.tabSnapshots[indexPath.row];
-    cell.textLabel.text = tab.topViewController.title;
-    cell.detailTextLabel.text = FLEXPluralString(tab.viewControllers.count, @"pages", @"page");
-
-    if (!cell.tag) {
+    if (self.mode == FLEXSwitcherModeTabs) {
+        UINavigationController *tab = self.openTabs[indexPath.row];
+        cell.imageView.image = self.tabSnapshots[indexPath.row];
+        cell.textLabel.text = tab.topViewController.title;
+        cell.detailTextLabel.text = FLEXPluralString(tab.viewControllers.count, @"pages", @"page");
         cell.textLabel.lineBreakMode = NSLineBreakByTruncatingTail;
         cell.textLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleHeadline];
         cell.detailTextLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleSubheadline];
-        cell.tag = 1;
-    }
-
-    if (indexPath.row == self.activeIndex) {
-        cell.backgroundColor = FLEXColor.secondaryBackgroundColor;
+        cell.backgroundColor = (indexPath.row == self.activeIndex)
+            ? FLEXColor.secondaryBackgroundColor : FLEXColor.primaryBackgroundColor;
     } else {
+        id object = self.bookmarks[indexPath.row];
+        cell.imageView.image = nil;
+        cell.textLabel.text = [FLEXRuntimeUtility safeDescriptionForObject:object];
+        cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ — %p", [object class], object];
+        cell.textLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+        cell.textLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
+        cell.detailTextLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleCaption1];
         cell.backgroundColor = FLEXColor.primaryBackgroundColor;
     }
 
@@ -312,20 +352,21 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     if (self.editing) {
-        // Case: editing with multi-select
-        self.toolbarItems.lastObject.title = @"Close Selected";
+        self.toolbarItems.lastObject.title = (self.mode == FLEXSwitcherModeTabs) ? @"Close Selected" : @"Remove Selected";
         self.toolbarItems.lastObject.tintColor = FLEXColor.destructiveColor;
-    } else {
+        return;
+    }
+
+    if (self.mode == FLEXSwitcherModeTabs) {
         if (self.activeIndex == indexPath.row && self.corePresenter != self.presentingViewController) {
-            // Case: selected the already active tab
             [self dismissAnimated];
         } else {
-            // Case: selected a different tab,
-            // or selected a tab when presented from the FLEX toolbar
             FLEXTabList.sharedList.activeTabIndex = indexPath.row;
             self.presentNewActiveTabOnDismiss = YES;
             [self dismissAnimated];
         }
+    } else {
+        [self openBookmark:self.bookmarks[indexPath.row]];
     }
 }
 
@@ -347,15 +388,16 @@ commitEditingStyle:(UITableViewCellEditingStyle)edit
 forRowAtIndexPath:(NSIndexPath *)indexPath {
     NSParameterAssert(edit == UITableViewCellEditingStyleDelete);
 
-    // Close tab and update data source
-    [FLEXTabList.sharedList closeTab:self.openTabs[indexPath.row]];
-    BOOL activeTabChanged = [self reloadData:YES];
-
-    // Delete row from table view
-    [table deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
-
-    // Refresh the newly active tab row if needed
-    [self reloadActiveTabRowIfChanged:activeTabChanged];
+    if (self.mode == FLEXSwitcherModeTabs) {
+        [FLEXTabList.sharedList closeTab:self.openTabs[indexPath.row]];
+        BOOL activeTabChanged = [self reloadData:YES];
+        [table deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+        [self reloadActiveTabRowIfChanged:activeTabChanged];
+    } else {
+        [FLEXBookmarkManager.bookmarks removeObjectAtIndex:indexPath.row];
+        [self reloadData:NO];
+        [table deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+    }
 }
 
 @end
