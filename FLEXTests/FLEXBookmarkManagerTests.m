@@ -40,4 +40,10 @@
     XCTAssertEqual(FLEXBookmarkManager.bookmarks.count, 0);
 }
 
+- (void)testRemoveAbsentObjectIsNoOp {
+    NSObject *o = [NSObject new];
+    [FLEXBookmarkManager removeBookmark:o];
+    XCTAssertEqual(FLEXBookmarkManager.bookmarks.count, 0);
+}
+
 @end

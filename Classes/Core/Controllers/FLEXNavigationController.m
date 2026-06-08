@@ -52,6 +52,8 @@
 @property (nonatomic) UISwipeGestureRecognizer *navigationBarSwipeGesture;
 @end
 
+static const NSInteger kFLEXNavBarDoneItemTag = 0x00D09E;
+
 @implementation FLEXNavigationController
 
 + (instancetype)withRootViewController:(UIViewController *)rootVC {
@@ -162,19 +164,21 @@
         doneItem = UIBarButtonSystemItemCancel;
     }
     
-    // Check if a done item already exists
+    // Check if our injected done item already exists (identified by tag, since
+    // other right-bar items like the object-explorer bookmark toggle may be present)
     for (UIBarButtonItem *item in navigationItem.rightBarButtonItems) {
-        if (item.style == doneItem) {
+        if (item.tag == kFLEXNavBarDoneItemTag) {
             return;
         }
     }
-    
+
     // Give root view controllers a Done button if it does not already have one
     UIBarButtonItem *done = [[UIBarButtonItem alloc]
         initWithBarButtonSystemItem:doneItem
         target:self
         action:@selector(dismissAnimated)
     ];
+    done.tag = kFLEXNavBarDoneItemTag;
 
     // Prepend the button if other buttons exist already
     NSArray *existingItems = navigationItem.rightBarButtonItems;

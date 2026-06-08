@@ -176,6 +176,11 @@
     }
 }
 
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    self.bookmarkItem.image = [self bookmarkImage];
+}
+
 - (BOOL)scrollViewShouldScrollToTop:(UIScrollView *)scrollView {
     if (@available(iOS 26.0, *)) {
     } else {
