@@ -43,7 +43,6 @@
 #import "FLEXObjectExplorerViewController.h"
 #import "FLEXObjectExplorerFactory.h"
 #import "FLEXNetworkMITMViewController.h"
-#import "FLEXTabsViewController.h"
 #import "FLEXWindowManagerController.h"
 #import "FLEXViewControllersViewController.h"
 #import "NSUserDefaults+FLEX.h"
@@ -509,11 +508,8 @@ static const CGFloat kToolbarStashDragCommitFraction = 0.5;
 }
 
 - (void)recentButtonTapped:(FLEXExplorerToolbarItem *)sender {
-    // Opens the tab/bookmark switcher (formerly resumed the active tab). Wrapped in a plain
-    // UINavigationController (not FLEXNavigationController) so the switcher isn't itself a tab.
-    [self presentViewController:[[UINavigationController alloc]
-        initWithRootViewController:[FLEXTabsViewController new]
-    ] animated:YES completion:nil];
+    NSAssert(FLEXTabList.sharedList.activeTab, @"Must have active tab");
+    [self presentViewController:FLEXTabList.sharedList.activeTab animated:YES completion:nil];
 }
 
 - (void)moveButtonTapped:(FLEXExplorerToolbarItem *)sender {
@@ -539,9 +535,12 @@ static const CGFloat kToolbarStashDragCommitFraction = 0.5;
     toolbar.moveItem.enabled = hasSelectedObject;
     toolbar.moveItem.selected = self.currentMode == FLEXExplorerModeMove;
 
-    // Tabs button is always enabled — the switcher can open a new tab or show bookmarks.
-    // (The property is named recentItem; it is now the Tabs button — see FLEXExplorerToolbar.)
-    toolbar.recentItem.enabled = YES;
+    // Recent only enabled when we have a last active tab
+    if (!self.presentedViewController) {
+        toolbar.recentItem.enabled = FLEXTabList.sharedList.activeTab != nil;
+    } else {
+        toolbar.recentItem.enabled = NO;
+    }
 }
 
 
