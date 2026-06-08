@@ -48,4 +48,23 @@ static NSMutableArray *kFLEXBookmarkManagerBookmarks = nil;
     return kFLEXBookmarkManagerBookmarks;
 }
 
++ (BOOL)isObjectBookmarked:(id)object {
+    if (!object) return NO;
+    return [self.bookmarks indexOfObjectIdenticalTo:object] != NSNotFound;
+}
+
++ (void)addBookmark:(id)object {
+    if (object && ![self isObjectBookmarked:object]) {
+        [self.bookmarks addObject:object];
+    }
+}
+
++ (void)removeBookmark:(id)object {
+    if (!object) return;
+    NSUInteger index = [self.bookmarks indexOfObjectIdenticalTo:object];
+    if (index != NSNotFound) {
+        [self.bookmarks removeObjectAtIndex:index];
+    }
+}
+
 @end

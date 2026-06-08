@@ -62,6 +62,8 @@
 
 @property (nonatomic, readonly) NSArray<NSString *> *observedNotifications;
 
+@property (nonatomic) UIBarButtonItem *bookmarkItem;
+
 @end
 
 @implementation FLEXObjectExplorerViewController
@@ -138,6 +140,13 @@
     [self addToolbarItems:@[[UIBarButtonItem
         flex_itemWithImage:FLEXResources.moreIcon target:self action:@selector(moreButtonPressed:)
     ]]];
+
+    // Per-object bookmark toggle (ribbon) in the nav bar
+    self.bookmarkItem = [[UIBarButtonItem alloc]
+        initWithImage:[self bookmarkImage]
+        style:UIBarButtonItemStylePlain
+        target:self action:@selector(toggleBookmark:)];
+    self.navigationItem.rightBarButtonItem = self.bookmarkItem;
 
     // Swipe gestures to swipe between classes in the hierarchy
     UISwipeGestureRecognizer *leftSwipe = [[UISwipeGestureRecognizer alloc]
@@ -259,9 +268,6 @@
 
 - (void)shareButtonPressed:(UIBarButtonItem *)sender {
     [FLEXAlert makeSheet:^(FLEXAlert *make) {
-        make.button(@"Add to Bookmarks").handler(^(NSArray<NSString *> *strings) {
-            [FLEXBookmarkManager.bookmarks addObject:self.object];
-        });
         make.button(@"Copy Description").handler(^(NSArray<NSString *> *strings) {
             UIPasteboard.generalPasteboard.string = self.explorer.objectDescription;
         });
@@ -270,6 +276,20 @@
         });
         make.button(@"Cancel").cancelStyle();
     } showFrom:self source:sender];
+}
+
+- (UIImage *)bookmarkImage {
+    BOOL bookmarked = [FLEXBookmarkManager isObjectBookmarked:self.object];
+    return [UIImage systemImageNamed:(bookmarked ? @"bookmark.fill" : @"bookmark")];
+}
+
+- (void)toggleBookmark:(UIBarButtonItem *)sender {
+    if ([FLEXBookmarkManager isObjectBookmarked:self.object]) {
+        [FLEXBookmarkManager removeBookmark:self.object];
+    } else {
+        [FLEXBookmarkManager addBookmark:self.object];
+    }
+    self.bookmarkItem.image = [self bookmarkImage];
 }
 
 

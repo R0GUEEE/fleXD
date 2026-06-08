@@ -40,6 +40,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, readonly, class) NSMutableArray *bookmarks;
 
+/// Identity-based (not -isEqual:) membership check.
++ (BOOL)isObjectBookmarked:(nullable id)object;
+/// Adds the object if not already bookmarked (by identity). nil is a no-op.
++ (void)addBookmark:(nullable id)object;
+/// Removes the object by identity if present. nil is a no-op.
++ (void)removeBookmark:(nullable id)object;
+
 @end
 
 NS_ASSUME_NONNULL_END
