@@ -170,6 +170,11 @@ extern CGFloat const kFLEXDebounceForExpensiveIO;
 @property (nonatomic, readonly) UIBarButtonItem *shareToolbarItem;
 @property (nonatomic, readonly) UIBarButtonItem *openTabsToolbarItem;
 
+/// An optional bar button item placed immediately before the tab-switcher item in
+/// the bottom toolbar (i.e. next to the Tabs button). Subclasses may set this — e.g.
+/// the object explorer's per-object bookmark toggle. Nil by default (nothing added).
+@property (nonatomic, nullable) UIBarButtonItem *bookmarkToolbarItem;
+
 /// Whether or not to display the "share" icon in the middle of the toolbar. NO by default.
 ///
 /// Turning this on after you have added custom toolbar items will

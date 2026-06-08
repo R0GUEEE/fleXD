@@ -313,24 +313,31 @@ CGFloat const kFLEXDebounceForExpensiveIO = 0.5;
         return;
     }
 
+    NSMutableArray<UIBarButtonItem *> *items;
     if (@available(iOS 26.0, *)) {
-        self.toolbarItems = @[
+        items = [@[
             self.middleLeftToolbarItem,
             UIBarButtonItem.flex_flexibleSpace,
             self.middleToolbarItem,
-            self.openTabsToolbarItem,
-        ];
+        ] mutableCopy];
     } else {
-        self.toolbarItems = @[
+        items = [@[
             self.leftmostToolbarItem,
             UIBarButtonItem.flex_flexibleSpace,
             self.middleLeftToolbarItem,
             UIBarButtonItem.flex_flexibleSpace,
             self.middleToolbarItem,
             UIBarButtonItem.flex_flexibleSpace,
-            self.openTabsToolbarItem,
-        ];
+        ] mutableCopy];
     }
+
+    // Optional per-screen item (e.g. the object explorer's bookmark toggle),
+    // placed immediately before the tab-switcher item.
+    if (self.bookmarkToolbarItem) {
+        [items addObject:self.bookmarkToolbarItem];
+    }
+    [items addObject:self.openTabsToolbarItem];
+    self.toolbarItems = items;
 
     for (UIBarButtonItem *item in self.toolbarItems) {
         [item _setWidth:60];

@@ -62,8 +62,6 @@
 
 @property (nonatomic, readonly) NSArray<NSString *> *observedNotifications;
 
-@property (nonatomic) UIBarButtonItem *bookmarkItem;
-
 @end
 
 @implementation FLEXObjectExplorerViewController
@@ -141,12 +139,11 @@
         flex_itemWithImage:FLEXResources.moreIcon target:self action:@selector(moreButtonPressed:)
     ]]];
 
-    // Per-object bookmark toggle (ribbon) in the nav bar
-    self.bookmarkItem = [[UIBarButtonItem alloc]
+    // Per-object bookmark toggle (ribbon), placed in the bottom toolbar next to the Tabs button
+    self.bookmarkToolbarItem = [[UIBarButtonItem alloc]
         initWithImage:[self bookmarkImage]
         style:UIBarButtonItemStylePlain
         target:self action:@selector(toggleBookmark:)];
-    self.navigationItem.rightBarButtonItem = self.bookmarkItem;
 
     // Swipe gestures to swipe between classes in the hierarchy
     UISwipeGestureRecognizer *leftSwipe = [[UISwipeGestureRecognizer alloc]
@@ -178,7 +175,7 @@
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
-    self.bookmarkItem.image = [self bookmarkImage];
+    self.bookmarkToolbarItem.image = [self bookmarkImage];
 }
 
 - (BOOL)scrollViewShouldScrollToTop:(UIScrollView *)scrollView {
@@ -294,7 +291,7 @@
     } else {
         [FLEXBookmarkManager addBookmark:self.object];
     }
-    self.bookmarkItem.image = [self bookmarkImage];
+    self.bookmarkToolbarItem.image = [self bookmarkImage];
 }
 
 
