@@ -36,7 +36,6 @@
 #import "FLEXExplorerToolbarItem.h"
 #import "FLEXUtility.h"
 #import "FLEXWindow.h"
-#import "FLEXTabList.h"
 #import "FLEXNavigationController.h"
 #import "FLEXHierarchyViewController.h"
 #import "FLEXGlobalsViewController.h"
@@ -483,7 +482,6 @@ static const CGFloat kToolbarStashDragCommitFraction = 0.5;
     NSDictionary<NSString *, FLEXExplorerToolbarItem *> *actionsToItems = @{
         NSStringFromSelector(@selector(selectButtonTapped:)):        toolbar.selectItem,
         NSStringFromSelector(@selector(hierarchyButtonTapped:)):     toolbar.hierarchyItem,
-        NSStringFromSelector(@selector(recentButtonTapped:)):        toolbar.recentItem,
         NSStringFromSelector(@selector(moveButtonTapped:)):          toolbar.moveItem,
         NSStringFromSelector(@selector(globalsButtonTapped:)):       toolbar.globalsItem,
     };
@@ -505,11 +503,6 @@ static const CGFloat kToolbarStashDragCommitFraction = 0.5;
 
 - (UIWindow *)statusWindow {
     return nil;
-}
-
-- (void)recentButtonTapped:(FLEXExplorerToolbarItem *)sender {
-    NSAssert(FLEXTabList.sharedList.activeTab, @"Must have active tab");
-    [self presentViewController:FLEXTabList.sharedList.activeTab animated:YES completion:nil];
 }
 
 - (void)moveButtonTapped:(FLEXExplorerToolbarItem *)sender {
@@ -534,13 +527,6 @@ static const CGFloat kToolbarStashDragCommitFraction = 0.5;
     const BOOL hasSelectedObject = self.selectedView != nil;
     toolbar.moveItem.enabled = hasSelectedObject;
     toolbar.moveItem.selected = self.currentMode == FLEXExplorerModeMove;
-
-    // Recent only enabled when we have a last active tab
-    if (!self.presentedViewController) {
-        toolbar.recentItem.enabled = FLEXTabList.sharedList.activeTab != nil;
-    } else {
-        toolbar.recentItem.enabled = NO;
-    }
 }
 
 

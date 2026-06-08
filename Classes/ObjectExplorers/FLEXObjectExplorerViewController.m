@@ -41,8 +41,6 @@
 #import "FLEXFieldEditorViewController.h"
 #import "FLEXMethodCallingViewController.h"
 #import "FLEXObjectListViewController.h"
-#import "FLEXTabsViewController.h"
-#import "FLEXBookmarkManager.h"
 #import "FLEXTableView.h"
 #import "FLEXResources.h"
 #import "FLEXTableViewCell.h"
@@ -139,12 +137,6 @@
         flex_itemWithImage:FLEXResources.moreIcon target:self action:@selector(moreButtonPressed:)
     ]]];
 
-    // Per-object bookmark toggle (ribbon), placed in the bottom toolbar next to the Tabs button
-    self.bookmarkToolbarItem = [[UIBarButtonItem alloc]
-        initWithImage:[self bookmarkImage]
-        style:UIBarButtonItemStylePlain
-        target:self action:@selector(toggleBookmark:)];
-
     // Swipe gestures to swipe between classes in the hierarchy
     UISwipeGestureRecognizer *leftSwipe = [[UISwipeGestureRecognizer alloc]
         initWithTarget:self action:@selector(handleSwipeGesture:)
@@ -171,11 +163,6 @@
             object:nil
         ];
     }
-}
-
-- (void)viewWillAppear:(BOOL)animated {
-    [super viewWillAppear:animated];
-    self.bookmarkToolbarItem.image = [self bookmarkImage];
 }
 
 - (BOOL)scrollViewShouldScrollToTop:(UIScrollView *)scrollView {
@@ -278,20 +265,6 @@
         });
         make.button(@"Cancel").cancelStyle();
     } showFrom:self source:sender];
-}
-
-- (UIImage *)bookmarkImage {
-    BOOL bookmarked = [FLEXBookmarkManager isObjectBookmarked:self.object];
-    return [UIImage systemImageNamed:(bookmarked ? @"bookmark.fill" : @"bookmark")];
-}
-
-- (void)toggleBookmark:(UIBarButtonItem *)sender {
-    if ([FLEXBookmarkManager isObjectBookmarked:self.object]) {
-        [FLEXBookmarkManager removeBookmark:self.object];
-    } else {
-        [FLEXBookmarkManager addBookmark:self.object];
-    }
-    self.bookmarkToolbarItem.image = [self bookmarkImage];
 }
 
 

@@ -35,7 +35,6 @@
 #import "FLEXNavigationController.h"
 #import "FLEXExplorerViewController.h"
 #import "FLEXObjectExplorerFactory.h"
-#import "FLEXTabList.h"
 
 @interface UINavigationController (Private) <UIGestureRecognizerDelegate>
 - (void)_gestureRecognizedInteractiveHide:(UIGestureRecognizer *)sender;
@@ -46,7 +45,6 @@
 
 @interface FLEXNavigationController ()
 @property (nonatomic, readonly) BOOL toolbarWasHidden;
-@property (nonatomic) BOOL waitingToAddTab;
 @property (nonatomic, readonly) BOOL canShowToolbar;
 @property (nonatomic) BOOL didSetupPendingDismissButtons;
 @property (nonatomic) UISwipeGestureRecognizer *navigationBarSwipeGesture;
@@ -63,8 +61,6 @@ static const NSInteger kFLEXNavBarDoneItemTag = 0x00D09E;
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-
-    self.waitingToAddTab = YES;
 
     // Add gesture to reveal toolbar if hidden
     UITapGestureRecognizer *navbarTapGesture = [[UITapGestureRecognizer alloc]
@@ -117,20 +113,6 @@ static const NSInteger kFLEXNavBarDoneItemTag = 0x00D09E;
     }
 }
 
-- (void)viewDidAppear:(BOOL)animated {
-    [super viewDidAppear:animated];
-
-    if (self.waitingToAddTab) {
-        // Only add new tab if we're presented properly
-        if ([self.presentingViewController isKindOfClass:[FLEXExplorerViewController class]]) {
-            // New navigation controllers always add themselves as new tabs,
-            // tabs are closed by FLEXExplorerViewController
-            [FLEXTabList.sharedList addTab:self];
-            self.waitingToAddTab = NO;
-        }
-    }
-}
-
 - (void)pushViewController:(UIViewController *)viewController animated:(BOOL)animated {
     [super pushViewController:viewController animated:animated];
     [self addNavigationBarItemsToViewController:viewController.navigationItem];
@@ -144,8 +126,6 @@ static const NSInteger kFLEXNavBarDoneItemTag = 0x00D09E;
 }
 
 - (void)dismissAnimated {
-    // Dismissing always backgrounds the tab (Done and swipe-down behave identically);
-    // tabs are closed only from the switcher.
     [self.presentingViewController dismissViewControllerAnimated:YES completion:nil];
 }
 
