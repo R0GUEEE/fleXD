@@ -92,6 +92,7 @@ extension Array where Element == CSetting {
             .headerSearchPath("ExplorerInterface/Bookmarks"),
             .headerSearchPath("GlobalStateExplorers"),
             .headerSearchPath("GlobalStateExplorers/Globals"),
+            .headerSearchPath("GlobalStateExplorers/NotificationObservers"),
             .headerSearchPath("GlobalStateExplorers/Keychain"),
             .headerSearchPath("GlobalStateExplorers/FileBrowser"),
             .headerSearchPath("GlobalStateExplorers/SystemLog"),
