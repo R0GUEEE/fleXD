@@ -1296,12 +1296,17 @@ static BOOL FLEXIsDefaultSkippedView(UIView *view) {
 - (BOOL)shouldReceiveTouchAtWindowPoint:(CGPoint)pointInWindowCoordinates {
     CGPoint pointInLocalCoordinates = [self.view convertPoint:pointInWindowCoordinates fromView:nil];
 
-    // If we have a modal presented, is it in the modal?
-    if (self.presentedViewController) {
-        UIView *presentedView = self.presentedViewController.view;
+    // If we have any modal(s) presented, is the touch inside one of them?
+    // The explorer can stack modals — e.g. a tool's nav controller presenting
+    // the Tabs/Bookmarks switcher. Once the first modal is scaled back behind a
+    // deeper sheet, only the deeper sheet covers points like its bottom toolbar,
+    // so we must hit-test the whole presentation chain, not just the first modal.
+    // Checking only the first one let those touches fall through the FLEX window
+    // to the app beneath (e.g. activating the app's search bar).
+    for (UIViewController *vc = self.presentedViewController; vc != nil; vc = vc.presentedViewController) {
+        UIView *presentedView = vc.view;
         CGPoint pipvc = [presentedView convertPoint:pointInLocalCoordinates fromView:self.view];
-        UIView *hit = [presentedView hitTest:pipvc withEvent:nil];
-        if (hit != nil) {
+        if ([presentedView hitTest:pipvc withEvent:nil] != nil) {
             return YES;
         }
     }
@@ -1339,7 +1344,7 @@ static BOOL FLEXIsDefaultSkippedView(UIView *view) {
     if (CGRectContainsPoint(self.explorerToolbar.frame, pointInLocalCoordinates)) {
         return YES;
     }
-    
+
     return NO;
 }
 
