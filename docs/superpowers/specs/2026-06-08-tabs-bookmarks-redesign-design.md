@@ -47,7 +47,8 @@ current behavior (`FLEXExplorerViewController`, `FLEXTableViewController`,
 | Entry points | One **Tabs** button everywhere opens the switcher; resume by tapping a tab. Remove the Recent button and the long-press gesture. |
 | Bookmarks home | The bookmarks **list** moves into the switcher as a segment. |
 | Bookmark ribbon | Becomes a **per-object toggle** in the object-explorer nav bar (outline ⇄ filled). |
-| Switcher layout | A segmented control: **Tabs \| Bookmarks** (iBooks pattern). |
+| Switcher layout | A segmented control: **Tabs \| Bookmarks**, placed in the **bottom toolbar** (Safari iOS 26 style). |
+| Bookmark toggle scope | Object-explorer screens **only**; not shown where it isn't supported. |
 | Standalone bookmarks screen | Retired entirely. |
 
 ## The mental model
@@ -61,16 +62,17 @@ current behavior (`FLEXExplorerViewController`, `FLEXTableViewController`,
 ### 1. The switcher (segmented Tabs | Bookmarks)
 
 `FLEXTabsViewController` becomes the single hub. A `UISegmentedControl` ("Tabs" / "Bookmarks")
-sits in the navigation title position.
+sits in the **bottom toolbar**, matching Safari on iOS 26 (controls live at the bottom, within
+thumb reach).
 
 ```
 ┌──────────────────────────────┐
-│        [ Tabs | Bookmarks ]   │  ← segmented control (nav title view)
 │  ┌────────┐  ┌────────┐       │
 │  │ snap   │  │ snap   │   ✕   │  Tabs segment: open tabs w/ snapshots,
 │  │ Globals│  │ UIView │       │  tap = switch, swipe/✕ = close, + = new
 │  └────────┘  └────────┘       │
-│                          [ + ]│
+│                               │
+│  [ + ]   [ Tabs | Bookmarks ] │  ← bottom toolbar: segmented control + New
 └──────────────────────────────┘
 ```
 
@@ -78,8 +80,9 @@ sits in the navigation title position.
   affordance) to close, `+` toolbar item to open a new tab.
 - **Bookmarks segment:** the bookmark list logic currently in `FLEXBookmarksViewController`,
   folded in — tap a bookmark to open it in a tab, swipe to remove, edit-mode for multi-remove.
-- The two segments swap the table's data source / editing behavior; the `+` item is shown only
-  on the Tabs segment.
+- The two segments swap the table's data source / editing behavior. The bottom toolbar holds
+  the segmented control plus the `+` (New Tab) item; `+` is shown/enabled only on the Tabs
+  segment.
 
 `FLEXBookmarksViewController` is **retired** as a standalone screen; its list/selection/delete
 logic is moved into the switcher's Bookmarks segment (extracted into a reusable section or data
@@ -160,9 +163,9 @@ exercised without UI. Manual smoke checklist:
   the switcher's Bookmarks segment; tapping it opens the object.
 - Long-press on the menu button no longer opens tabs; Recent button is gone.
 
-## Open items deferred to implementation
+## Resolved placement decisions
 
-- Exact placement of the segmented control (nav `titleView` vs. a header) — pick what renders
-  cleanly under iOS 26's nav bar.
-- Whether the bookmark toggle also belongs on non-object explorer screens that still represent a
-  bookmarkable target (default: object explorers only).
+- **Segmented control** lives in the switcher's **bottom toolbar** (Safari iOS 26 style),
+  alongside the `+` New Tab item — not in the nav bar.
+- **Bookmark toggle** is shown on **object-explorer screens only**; screens that don't represent
+  a bookmarkable object never display it.
