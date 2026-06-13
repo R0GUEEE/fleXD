@@ -6,23 +6,23 @@ Pod::Spec.new do |spec|
                         fleXD is a fork of FLEX, modernized for current iOS.
 
                         - Inspect and modify views in the hierarchy.
-                        - View detailed network request history.
+                        - View Detailed network request history.
                         - See the properties and ivars on any object.
                         - Dynamically modify many properties and ivars.
                         - Dynamically call instance and class methods.
                         - Access any live object via a scan of the heap.
                         - See system log messages (i.e. from `NSLog()`).
                         - View the file system within your app's sandbox.
-                        - Explore all classes in your app and linked system frameworks (public and private).
+                        - Explore all classes in your app and linked systems frameworks (public and private).
                         - Quickly access useful objects such as `[UIApplication sharedApplication]`, the app delegate, the root view controller on the key window, and more.
                         - Dynamically view and modify `NSUserDefaults` values.
                         DESC
 
-  spec.homepage         = "https://github.com/TimOliver/FLEXD"
+  spec.homepage         = "https://github.com/TimOliver/fleXD"
   spec.license          = { :type => "BSD", :file => "LICENSE" }
   spec.authors          = { "Tim Oliver" => "me@timoliver.com.au",
                             "Tanner Bennett" => "tannerbennett@me.com" }
-  spec.platform         = :ios, "15.0"
+  spec.platform         = :ios, "12.0"
   spec.source           = { :git => "https://github.com/TimOliver/FLEXD.git", :tag => "#{spec.version}" }
 
   spec.source_files     = "Classes/**/*.{h,c,m,mm}"

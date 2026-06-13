@@ -422,6 +422,7 @@
 		224D49A51C673AB5000EAB86 /* FLEXRealmDatabaseManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FLEXRealmDatabaseManager.m; sourceTree = "<group>"; };
 		224D49A61C673AB5000EAB86 /* FLEXSQLiteDatabaseManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FLEXSQLiteDatabaseManager.h; sourceTree = "<group>"; };
 		224D49A71C673AB5000EAB86 /* FLEXSQLiteDatabaseManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FLEXSQLiteDatabaseManager.m; sourceTree = "<group>"; };
+		22C6F9532FDDCE55006D8C38 /* fleXD.podspec */ = {isa = PBXFileReference; lastKnownFileType = text; path = fleXD.podspec; sourceTree = "<group>"; };
 		271F4600D7194A84A8F2AC69 /* FLEXNotificationObserversViewController.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = FLEXNotificationObserversViewController.h; path = Classes/GlobalStateExplorers/NotificationObservers/FLEXNotificationObserversViewController.h; sourceTree = "<group>"; };
 		29432CB34361CDFBF76716A4 /* FLEXNotificationRecorder.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = FLEXNotificationRecorder.m; path = Classes/GlobalStateExplorers/NotificationObservers/FLEXNotificationRecorder.m; sourceTree = "<group>"; };
 		2A552DFBCD9FBC1D41760F41 /* FLEXNotificationObserverSection.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = FLEXNotificationObserverSection.h; path = Classes/GlobalStateExplorers/NotificationObservers/FLEXNotificationObserverSection.h; sourceTree = "<group>"; };
@@ -856,6 +857,7 @@
 				1C27A8B71F0E5A0400F0D02D /* FLEXTests */,
 				3A4C95451B5B216C0088C3F2 /* Frameworks */,
 				222DBA4D2F7E1D4600DEC76D /* LICENSE */,
+				22C6F9532FDDCE55006D8C38 /* fleXD.podspec */,
 				222DBA4E2F7E1D4600DEC76D /* README.md */,
 				3A4C94201B5B20570088C3F2 /* Products */,
 				D66BBB38E2C286848E296069 /* Classes */,
