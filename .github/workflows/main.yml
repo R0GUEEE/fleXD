@@ -1,0 +1,72 @@
+name: Build .deb (macOS)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version (e.g. 6.1.0-1). If empty, uses git describe --tags or defaults to 0.0.0-1'
+        required: false
+      package_arch:
+        description: 'Target architecture (iphoneos-arm64 or iphoneos-arm)'
+        required: false
+        default: 'iphoneos-arm64'
+
+jobs:
+  build-and-package:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Print repo info
+        run: |
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Ref: $GITHUB_REF"
+
+      - name: Install packaging tools
+        run: |
+          brew update
+          brew install dpkg fakeroot || true
+
+      - name: List Xcode schemes
+        run: |
+          xcodebuild -project FLEX.xcodeproj -list || true
+
+      - name: Determine version
+        id: ver
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            tag=$(git describe --tags --abbrev=0 2>/dev/null || true)
+            if [ -n "$tag" ]; then
+              echo "version=$tag" >> $GITHUB_OUTPUT
+            else
+              echo "version=0.0.0-1" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Build FLEX (Release, iphoneos)
+        run: |
+          set -e
+          # Change the scheme name here if your project uses a different scheme
+          SCHEME="FLEX"
+          xcodebuild -project FLEX.xcodeproj -scheme "$SCHEME" -configuration Release -sdk iphoneos BUILD_DIR=build clean build
+
+      - name: Run packaging script
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          ARCH: ${{ github.event.inputs.package_arch || 'iphoneos-arm64' }}
+        run: |
+          chmod +x Scripts/package_deb.sh || true
+          Scripts/package_deb.sh "$VERSION" "$ARCH"
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fleXD-deb
+          path: |
+            fleXD_${{ steps.ver.outputs.version }}_${{ github.event.inputs.package_arch || 'iphoneos-arm64' }}.deb
