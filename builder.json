@@ -1,0 +1,14 @@
+{
+  "project": "fleXD",
+  "platform": "ios",
+  "github": {
+    "owner": "R0GUEEE",
+    "repo": "fleXD"
+  },
+  "ios": {},
+  "flutter": {
+    "watch": {}
+  },
+  "reactNative": {},
+  "mobai": {}
+}
